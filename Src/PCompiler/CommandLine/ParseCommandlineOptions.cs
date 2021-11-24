@@ -150,6 +150,10 @@ namespace Plang.Compiler
                                         outputLanguage = CompilerOutput.Rvm;
                                         break;
 
+                                    case "formula":
+                                        outputLanguage = CompilerOutput.Formula;
+                                        break;
+
                                     default:
                                         throw new CommandlineParsingError($"Unrecognized generate option '{colonArg}', expecting C or CSharp");
                                 }
@@ -342,6 +346,10 @@ namespace Plang.Compiler
 
                 case "rvm":
                     outputLanguage = CompilerOutput.Rvm;
+                    break;
+
+                case "formula":
+                    outputLanguage = CompilerOutput.Formula;
                     break;
 
                 default:

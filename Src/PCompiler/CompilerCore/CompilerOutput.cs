@@ -4,6 +4,7 @@ namespace Plang.Compiler
     {
         C,
         CSharp,
+        Formula,
         Rvm
     }
 }
