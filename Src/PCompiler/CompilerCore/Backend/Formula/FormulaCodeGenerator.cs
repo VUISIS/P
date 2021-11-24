@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Runtime.CompilerServices;
 using Plang.Compiler.TypeChecker;
-
+using Plang.Compiler.TypeChecker.AST;
 using Plang.Compiler.TypeChecker.AST.Declarations;
+using Plang.Compiler.TypeChecker.AST.Statements;
 using Plang.Compiler.TypeChecker.Types;
 
 namespace Plang.Compiler.Backend.Formula
@@ -50,6 +52,25 @@ namespace Plang.Compiler.Backend.Formula
             }
         }
 
+        public void WriteList<T>(StringWriter stream, string ItemName, IEnumerable<T> objs,
+            Action<T, StringWriter> valueExtractor)
+        {
+            var parenCount = 0;
+            foreach (var o in objs)
+            {
+                stream.Write($"{ItemName}(");
+                valueExtractor(o, stream);
+                stream.Write(')');
+                parenCount++;
+            }
+            stream.Write("NIL");
+            while (parenCount > 0)
+            {
+                stream.Write(")");
+                parenCount--;
+            }
+        }
+
         public string GenerateId()
         {
             return context.GenerateId();
@@ -85,7 +106,7 @@ namespace Plang.Compiler.Backend.Formula
                 }
                 else
                 {
-                    GenerateType(stream, typeDef.Type);
+                    GenerateTypeExpr(stream, typeDef.Type);
                     stream.Write(",");
                 }
                 stream.WriteLine($"\"{GenerateId()}\").");
@@ -109,7 +130,7 @@ namespace Plang.Compiler.Backend.Formula
                 {
                     stream.Write("NIL, ");
                 }
-                GenerateType(stream, evt.PayloadType);
+                GenerateTypeExpr(stream, evt.PayloadType);
                 stream.Write($", {GenerateId()}).");
             }
         }
@@ -130,10 +151,46 @@ namespace Plang.Compiler.Backend.Formula
             foreach (var func in functions)
             {
                 
-//                stream.Write();
+                stream.Write($"FunDecl(\"{func.Name}\", ");
+                if (func.Owner != null)
+                {
+                    stream.Write($"\"{func.Owner.Name}\",");
+                }
+                else
+                {
+                    stream.Write("NIL,");
+                    
+                }
+                WriteList(stream, "NmdTupType", func.Signature.Parameters,
+                    (v, vstream) => GenerateNamedTupTypeField(vstream, v));
+                stream.Write(",");
+                GenerateTypeExpr(stream, func.Signature.ReturnType);
+                stream.Write(",");
+                WriteList(stream, "NmdTupType", func.LocalVariables,
+                    (v, vstream) => GenerateNamedTupTypeField(vstream, v));
+                stream.Write(",");
+                if (func.Body == null)
+                {
+                    stream.Write("NIL,");
+                }
+                else
+                {
+                    GenerateStmt(stream, func.Body);
+
+                }
+                
+                
             }
         }
-        public void GenerateType(StringWriter stream, PLanguageType plt)
+
+        public void GenerateNamedTupTypeField(StringWriter stream, Variable v)
+        {
+            stream.Write($"NmdTupTypeField({v.Name},");
+            GenerateTypeExpr(stream, v.Type);
+            stream.Write(")");
+        }
+        
+        public void GenerateTypeExpr(StringWriter stream, PLanguageType plt)
         {
             switch (plt)
             {
@@ -148,9 +205,9 @@ namespace Plang.Compiler.Backend.Formula
                     break;
                 case MapType t:
                     stream.Write($"MapType(");
-                    GenerateType(stream, t.KeyType);       
+                    GenerateTypeExpr(stream, t.KeyType);       
                     stream.Write(",");
-                    GenerateType(stream, t.ValueType); 
+                    GenerateTypeExpr(stream, t.ValueType); 
                     stream.Write(")");
                     break;
                 case NamedTupleType t:
@@ -162,7 +219,7 @@ namespace Plang.Compiler.Backend.Formula
                         typesEnum.MoveNext();
                         fieldType = typesEnum.Current;
                         stream.Write($"NmdTupType(NmdTupTypeField(\"{name}\",");
-                        GenerateType(stream, fieldType);
+                        GenerateTypeExpr(stream, fieldType);
                         stream.Write("),");
                         numParens++;
                     }
@@ -181,12 +238,12 @@ namespace Plang.Compiler.Backend.Formula
                     break;
                 case SequenceType t:
                     stream.Write($"SeqType(");
-                    GenerateType(stream, t.ElementType);
+                    GenerateTypeExpr(stream, t.ElementType);
                     stream.Write(")");
                     break;
                 case SetType t:
                     stream.Write($"SeqType(");
-                    GenerateType(stream, t.ElementType);
+                    GenerateTypeExpr(stream, t.ElementType);
                     stream.Write(")");
                     break;
                     break;
@@ -194,7 +251,7 @@ namespace Plang.Compiler.Backend.Formula
                     stream.Write("Tuple(");
                     foreach (var tt in t.Types)
                     {
-                        GenerateType(stream, tt);
+                        GenerateTypeExpr(stream, tt);
                         stream.Write(",");
                     }
                     stream.Write("NIL)");
@@ -203,6 +260,235 @@ namespace Plang.Compiler.Backend.Formula
                     stream.Write($"NameType(\"{t.TypeDefDecl.Name}\")");
                     break;
             }
+        }
+
+        public void GenerateStmt(StringWriter stream, IPStmt stmt)
+        {
+            switch (stmt)
+            {
+                case CtorStmt s:
+                    stream.Write($"NewStmt(\"{s.Interface.Name},");
+                    WriteExprList(stream, s.Arguments);
+                    stream.Write($",NIL,{GenerateId()})");
+                    break;
+                case RaiseStmt s:
+                    stream.Write("Raise(");
+                    GenerateExpr(stream, s.PEvent);
+                    stream.Write(",");
+                    WriteExprList(stream, s.Payload);
+                    stream.Write($",{GenerateId()})");
+                    break;
+                case SendStmt s:
+                    stream.Write("Send(");
+                    GenerateExpr(stream, s.MachineExpr);
+                    stream.Write(",");
+                    GenerateExpr(stream, s.Evt);
+                    stream.Write(",");
+                    WriteExprList(stream, s.Arguments);
+                    stream.Write($",{GenerateId()})");
+                    break;
+                case AnnounceStmt s:
+                    stream.Write("Announce(");
+                    GenerateExpr(stream, s.PEvent);
+                    stream.Write(",");
+                    // Both the formula definition and the P grammar allow Announce to have a list
+                    // of expressions, but the AnnounceStmt can only have 1 expr in the payload
+                    // Here is where the parser generates one from the list of exprs:
+                    //  return new AnnounceStmt(context, evtExpr, args.Count == 0 ? null : args[0]);
+                    if (s.Payload == null)
+                    {
+                        stream.Write("NIL");
+                    }
+                    else
+                    {
+                        GenerateExpr(stream, s.Payload);
+                    }
+                    stream.Write($",{GenerateId()})");
+                    break;
+                case FunCallStmt s:
+                    stream.Write($"FunStmt({s.Function.Name},");
+                    WriteExprList(stream,s.ArgsList);
+                    stream.Write($",NIL,{GenerateId()})");
+                    break;
+                
+                case PopStmt:
+                    stream.Write($"NulStmt(POP,{GenerateId()})");
+                    break;
+                
+                case RemoveStmt s:
+                    stream.Write("BinStmt(REMOVE,");
+                    GenerateExpr(stream, s.Variable);
+                    stream.Write(",NONE,");
+                    GenerateExpr(stream, s.Value);
+                    stream.Write($",{GenerateId()})");
+                    break;
+                
+                case AssignStmt s:
+                    stream.Write("BinStmt(ASSIGN,");
+                    GenerateExpr(stream, s.Location);
+                    stream.Write(",NONE,");
+                    GenerateExpr(stream, s.Value);
+                    stream.Write($",{GenerateId()})");
+                    break;
+                    
+                case MoveAssignStmt s:
+                    stream.Write("BinStmt(ASSIGN,");
+                    GenerateExpr(stream, s.ToLocation);
+                    
+                    stream.Write(",Move,");
+                    GenerateVariable(stream, s.FromVariable);
+                    stream.Write($",{GenerateId()})");
+                    break;
+                    
+                case SwapAssignStmt s:
+                    stream.Write("BinStmt(ASSIGN,");
+                    GenerateExpr(stream, s.NewLocation);
+                    
+                    stream.Write(",Swap,");
+                    GenerateVariable(stream, s.OldLocation);
+                    stream.Write($",{GenerateId()})");
+                    break;
+                    
+                case InsertStmt s:
+                    stream.Write("InsertStmt(");
+                    GenerateExpr(stream, s.Variable);
+                    stream.Write(",");
+                    GenerateExpr(stream, s.Index);
+                    stream.Write(",");
+                    GenerateExpr(stream, s.Value);
+                    stream.Write($",{GenerateId()})");
+                    break;
+                
+                case AddStmt s:
+                    stream.Write("BinStmt(INSERT,");
+                    GenerateExpr(stream, s.Variable);
+                    stream.Write(",NONE,");
+                    GenerateExpr(stream, s.Value);
+                    stream.Write($",{GenerateId()})");
+                    break;
+                    
+                case ReturnStmt s:
+                    stream.Write("Return(");
+                    if (s.ReturnValue == null)
+                    {
+                        stream.Write("NIL");
+                    }
+                    else
+                    {
+                        GenerateExpr(stream, s.ReturnValue);
+                    }
+                    stream.Write(")");
+                    break;
+                
+                case WhileStmt s:
+                    stream.Write("While(");
+                    GenerateExpr(stream, s.Condition);
+                    stream.Write(",");
+                    GenerateStmt(stream, s.Body);
+                    stream.Write($"{GenerateId()})");
+                    break;
+                
+                case IfStmt s:
+                    stream.Write("Ite(");
+                    GenerateExpr(stream, s.Condition);
+                    stream.Write(",");
+                    GenerateStmt(stream, s.ThenBranch);
+                    stream.Write(",");
+                    GenerateStmt(stream, s.ElseBranch);
+                    stream.Write($",{GenerateId()})");
+                    break;
+                
+                case CompoundStmt s:
+                    if (s.Statements.Count == 1)
+                    {
+                        GenerateStmt(stream, s.Statements[0]);
+                    }
+                    else
+                    {
+                        int parenCount = 0;
+                        for (int i = 0; i < s.Statements.Count - 1; i++)
+                        {
+                            stream.Write("Seq(");
+                            GenerateStmt(stream, s.Statements[i]);
+                            stream.Write(",");
+                            parenCount++;
+                        }
+                        GenerateStmt(stream, s.Statements[^1]);
+                        for (int i = 0; i < parenCount; i++)
+                        {
+                            stream.Write(")");
+                        }
+                    }
+                    break;
+                
+                case ReceiveStmt s:
+                    stream.Write("Receive(");
+                    GenerateCases(stream, s.Cases);
+                    stream.Write($",0,{GenerateId()})");
+                    break;
+                
+                case AssertStmt s:
+                    stream.Write("Assert(");
+                    GenerateExpr(stream, s.Assertion);
+                    if (s.Message == null)
+                    {
+                        stream.Write("NIL");
+                    }
+                    else
+                    {
+                        GenerateExpr(stream, s.Message);
+                    }
+
+                    stream.Write($",{GenerateId()})");
+                    break;
+                
+                case PrintStmt s:
+                    stream.Write("Print(");
+                    GenerateExpr(stream, s.Message);
+                    stream.Write($",NIL, NIL,{GenerateId()})");
+                    break;
+                
+                case GotoStmt s:
+                    stream.Write("Goto(");
+                    stream.Write($"QualifiedName(\"{s.State.Name}\"),");
+                    if (s.Payload == null)
+                    {
+                        stream.Write("NIL");
+                    }
+                    else
+                    {
+                        GenerateExpr(stream, s.Payload);           
+                    }
+                    stream.Write($",{GenerateId()})");
+                    break;
+                
+                case BreakStmt s:
+                    stream.Write($"Break({GenerateId()})");
+                    break;
+                
+                case ContinueStmt s:
+                    stream.Write($"Continue({GenerateId()})");
+                    break;
+            }
+        }
+
+        public void WriteExprList(StringWriter stream, IEnumerable<IPExpr> exprs)
+        {
+            
+        }
+        public void GenerateExpr(StringWriter stream, IPExpr expr)
+        {
+            
+        }
+
+        public void GenerateVariable(StringWriter stream, Variable v)
+        {
+            
+        }
+
+        public void GenerateCases(StringWriter stream, IReadOnlyDictionary<PEvent, Function> cases)
+        {
+            
         }
     }
 }
