@@ -52,5 +52,5 @@ macro ( Publish_Library_Header target )
 	endforeach()
 endmacro()
 
-add_subdirectory ( Prt )
+add_subdirectory ( PRuntimes/CRuntime )
 
