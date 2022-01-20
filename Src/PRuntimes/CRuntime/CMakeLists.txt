@@ -1,9 +1,9 @@
 set ( P_Prt_Src_Path ${CMAKE_CURRENT_SOURCE_DIR} )
 set ( API_PATH ${P_Prt_Src_Path}/API/ )
 set ( Core_PATH ${P_Prt_Src_Path}/Core/ )
-set ( LIBHANDLER_PATH ${P_Prt_Src_Path}/../../Ext/libhandler/)
-set ( LIBHANDLERINC_PATH ${P_Prt_Src_Path}/../../Ext/libhandler/inc)
-set ( LIBHANDLEROUT_PATH ${P_Prt_Src_Path}/../../Ext/libhandler/out)
+set ( LIBHANDLER_PATH ${P_Prt_Src_Path}/../../../Ext/libhandler/)
+set ( LIBHANDLERINC_PATH ${P_Prt_Src_Path}/../../../Ext/libhandler/inc)
+set ( LIBHANDLEROUT_PATH ${P_Prt_Src_Path}/../../../Ext/libhandler/out)
 
 ADD_CUSTOM_TARGET( 
   libhandler
