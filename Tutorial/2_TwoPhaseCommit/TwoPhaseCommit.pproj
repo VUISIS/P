@@ -11,4 +11,5 @@
 <IncludeProject>../Common/Timer/Timer.pproj</IncludeProject>
 <!-- Add the dependencies for the FailureInjector machine -->
 <IncludeProject>../Common/FailureInjector/FailureInjector.pproj</IncludeProject>
+<Target>Formula</Target>
 </Project>

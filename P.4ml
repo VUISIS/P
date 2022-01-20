@@ -1,4 +1,4 @@
-﻿domain P extends PStaticTyping, PStructuralTyping
+﻿domain P extends PError, PData
 {
 
 }
@@ -25,7 +25,7 @@ domain PData
     Qualifier       ::= { NONE, MOVE, SWAP }.
     
 	StringList		::= new (hd: String, tl: any StringList + { NIL }).
-	iNTEGERlIST		::= NEW (Hd: Integer, tl: any IntegerList + { NIL }).
+	IntegerList		::= new (hd: Integer, tl: any IntegerList + { NIL }).
 	EnumTypeDef		::= new (name: String, elems: any StringList, values: any IntegerList + { NIL }, id: any Id).
 	TypeDef         ::= new (name: String, type: any TypeExpr + { NIL }, id: any Id).
 
@@ -57,6 +57,8 @@ domain PData
     Default    ::= new (type: any TypeExpr, id: any Id). 
     Cast       ::= new (arg: any Expr, type: any TypeExpr, id: any Id).
 	Convert    ::= new (arg: any Expr, type: any TypeExpr, id: any Id).
+    Clone      ::= new (arg: any Expr, id: any Id).
+    SetAcc     ::= new (set: any Expr, idx: any Expr, id: any Id).
     Tuple      ::= new (body: any Exprs, id: any Id).
     NamedTuple ::= new (body: any NamedExprs, id: any Id).
     Exprs      ::= new (qual: Qualifier, head: any Expr, tail: any Exprs + { NIL }).
@@ -126,7 +128,10 @@ domain PData
     FunProtoDecl   ::= fun (name: String -> params: any NmdTupType + { NIL }, return: any TypeExpr + { NIL }).
 	GlobalFunCreates ::= new (name: String, m: String).
 
-	AnonFunDecl    ::= new (owner: String + { NIL }, ownerFun: String + { NIL }, locals: any NmdTupType + { NIL }, body: any Stmt, envVars: any NmdTupType, id: any Id).
+// envVars doesn't seem to be used in functions in the current P implementation, removing for now
+//	AnonFunDecl    ::= new (owner: String + { NIL }, ownerFun: String + { NIL }, locals: any NmdTupType + { NIL }, body: any Stmt, envVars: any NmdTupType, id: any Id).
+	AnonFunDecl    ::= new (owner: String + { NIL }, ownerFun: String + { NIL }, locals: any NmdTupType + { NIL }, body: any Stmt, id: any Id).
+    
     
     StateDecl      ::= fun (name: any QualifiedName, owner: String -> entryAction: any AnonFunDecl + String, exitFun: any AnonFunDecl + String, temperature: { HOT, WARM, COLD }, id: any Id).
     TransDecl      ::= fun (src: StateDecl, trig: String + { NULL, HALT } -> dst: any QualifiedName, action: any { PUSH } + AnonFunDecl + String, id: any Id).
