@@ -59,11 +59,13 @@ domain PData
 	Convert    ::= new (arg: any Expr, type: any TypeExpr, id: any Id).
     Clone      ::= new (arg: any Expr, id: any Id).
     SetAcc     ::= new (set: any Expr, idx: any Expr, id: any Id).
+    MapAcc     ::= new (map: any Expr, idx: any Expr, id: any Id).
+    Choose     ::= new (expr: any Expr, id: any Id).
     Tuple      ::= new (body: any Exprs, id: any Id).
     NamedTuple ::= new (body: any NamedExprs, id: any Id).
     Exprs      ::= new (qual: Qualifier, head: any Expr, tail: any Exprs + { NIL }).
     NamedExprs ::= new (field: String, exp: any Expr, tail: any NamedExprs + { NIL }).
-    Expr       ::= Name + New + FunApp + NulApp + UnApp + BinApp + Field + Default + Cast + Convert + Tuple + NamedTuple.
+    Expr       ::= Name + New + FunApp + NulApp + UnApp + BinApp + Field + Default + Cast + Convert + Tuple + NamedTuple + SetAcc + MapAcc + Clone + Choose.
     ExprsExt   ::= Expr + Exprs + NamedExprs.
 
     //// Statements

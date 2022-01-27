@@ -79,7 +79,7 @@ namespace Plang.Compiler.Backend.Formula
             {
                 stream.Write($"{itemName}(");
                 valueExtractor(o, stream);
-                stream.Write("),");
+                stream.Write(",");
                 parenCount++;
             }
 
@@ -109,7 +109,7 @@ namespace Plang.Compiler.Backend.Formula
                     valueList.Add(elem.Value);
                 }
 
-                GenerateList(stream, "StringList", nameList, x => x);
+                GenerateList(stream, "StringList", nameList, x => "\""+x+"\"");
                 stream.Write(", ");
                 GenerateList(stream, "IntegerList", valueList, x => x.ToString());
                 stream.WriteLine($",{GenerateId()}).");
@@ -174,12 +174,20 @@ namespace Plang.Compiler.Backend.Formula
             foreach (var func in functions)
             {
                 GenerateFunction(stream, func);
+                stream.WriteLine(".");
             }
         }
 
         public void GenerateFunction(StringWriter stream, Function func)
         {
-            stream.Write($"FunDecl(\"{func.Name}\", ");
+            if (func.IsAnon)
+            {
+                stream.Write($"AnonFunDecl(");
+            }
+            else
+            {
+                stream.Write($"FunDecl(\"{func.Name}\", ");
+            }
             if (func.Owner != null)
             {
                 stream.Write($"\"{func.Owner.Name}\",");
@@ -190,28 +198,37 @@ namespace Plang.Compiler.Backend.Formula
 
             }
 
-            GenerateList(stream, "NmdTupType", func.Signature.Parameters,
-                (v, vstream) => GenerateNamedTupTypeField(vstream, v));
-            stream.Write(",");
-            GenerateTypeExpr(stream, func.Signature.ReturnType);
-            stream.Write(",");
+            if (func.IsAnon)
+            {
+                stream.Write($"\"{func.ParentFunction.Name}\",");
+            }
+
+            if (!func.IsAnon)
+            {
+                GenerateList(stream, "NmdTupType", func.Signature.Parameters,
+                    (v, vstream) => GenerateNamedTupTypeField(vstream, v));
+                stream.Write(",");
+                GenerateTypeExpr(stream, func.Signature.ReturnType);
+                stream.Write(",");
+            }
+
             GenerateList(stream, "NmdTupType", func.LocalVariables,
                 (v, vstream) => GenerateNamedTupTypeField(vstream, v));
             stream.Write(",");
             if (func.Body == null)
             {
-                stream.Write("NIL,");
+                stream.Write("NIL");
             }
             else
             {
                 GenerateStmt(stream, func.Body);
             }
-            stream.WriteLine($", {GenerateId()}).");
+            stream.Write($", {GenerateId()})");
         }
 
         public void GenerateNamedTupTypeField(StringWriter stream, Variable v)
         {
-            stream.Write($"NmdTupTypeField({v.Name},");
+            stream.Write($"NmdTupTypeField(\"{v.Name}\",");
             GenerateTypeExpr(stream, v.Type);
             stream.Write(")");
         }
@@ -298,7 +315,7 @@ namespace Plang.Compiler.Backend.Formula
             switch (stmt)
             {
                 case CtorStmt s:
-                    stream.Write($"NewStmt(\"{s.Interface.Name},");
+                    stream.Write($"NewStmt(\"{s.Interface.Name}\",");
                     GenerateExprList(stream, s.Arguments);
                     stream.WriteLine($",NIL,{GenerateId()})");
                     break;
@@ -338,9 +355,9 @@ namespace Plang.Compiler.Backend.Formula
                     stream.WriteLine($",{GenerateId()})");
                     break;
                 case FunCallStmt s:
-                    stream.Write($"FunStmt({s.Function.Name},");
+                    stream.Write($"FunStmt(\"{s.Function.Name}\",");
                     GenerateExprList(stream, s.ArgsList);
-                    stream.WriteLine($",NIL,{GenerateId()})");
+                    stream.WriteLine($",NIL,0,{GenerateId()})"); // TODO: where should label come from?
                     break;
 
                 case PopStmt:
@@ -367,7 +384,7 @@ namespace Plang.Compiler.Backend.Formula
                     stream.Write("BinStmt(ASSIGN,");
                     GenerateExpr(stream, s.ToLocation);
 
-                    stream.Write(",Move,");
+                    stream.Write(",MOVE,");
                     GenerateVariable(stream, s.FromVariable);
                     stream.WriteLine($",{GenerateId()})");
                     break;
@@ -376,7 +393,7 @@ namespace Plang.Compiler.Backend.Formula
                     stream.Write("BinStmt(ASSIGN,");
                     GenerateExpr(stream, s.NewLocation);
 
-                    stream.Write(",Swap,");
+                    stream.Write(",SWAP,");
                     GenerateVariable(stream, s.OldLocation);
                     stream.WriteLine($",{GenerateId()})");
                     break;
@@ -418,7 +435,7 @@ namespace Plang.Compiler.Backend.Formula
                     GenerateExpr(stream, s.Condition);
                     stream.Write(",");
                     GenerateStmt(stream, s.Body);
-                    stream.WriteLine($"{GenerateId()})");
+                    stream.WriteLine($",{GenerateId()})");
                     break;
 
                 case IfStmt s:
@@ -432,7 +449,11 @@ namespace Plang.Compiler.Backend.Formula
                     break;
 
                 case CompoundStmt s:
-                    if (s.Statements.Count == 1)
+                    if (s.Statements.Count == 0)
+                    {
+                        stream.Write($"NulStmt(SKIP, {GenerateId()})");
+                    }
+                    else if (s.Statements.Count == 1)
                     {
                         GenerateStmt(stream, s.Statements[0]);
                     }
@@ -450,7 +471,7 @@ namespace Plang.Compiler.Backend.Formula
                         GenerateStmt(stream, s.Statements[^1]);
                         for (int i = 0; i < parenCount; i++)
                         {
-                            stream.WriteLine(")");
+                            stream.Write($",{GenerateId()})");
                         }
                     }
 
@@ -558,7 +579,7 @@ namespace Plang.Compiler.Backend.Formula
                     break;
 
                 case BoolLiteralExpr e:
-                    stream.Write($"NulApp({e.Value}, {GenerateId()})");
+                    stream.Write($"NulApp({e.Value.ToString().ToUpper()}, {GenerateId()})");
                     break;
 
                 case FloatLiteralExpr e:
@@ -608,7 +629,7 @@ namespace Plang.Compiler.Backend.Formula
                     break;
 
                 case SeqAccessExpr e:
-                    stream.Write("BinApp(IDX");
+                    stream.Write("BinApp(IDX,");
                     GenerateExpr(stream, e.SeqExpr);
                     stream.Write(",");
                     GenerateExpr(stream, e.IndexExpr);
@@ -616,7 +637,7 @@ namespace Plang.Compiler.Backend.Formula
                     break;
 
                 case ContainsExpr e:
-                    stream.Write("BinApp(IDX");
+                    stream.Write("BinApp(IDX,");
                     GenerateExpr(stream, e.Item);
                     stream.Write(",");
                     GenerateExpr(stream, e.Collection);
@@ -660,12 +681,13 @@ namespace Plang.Compiler.Backend.Formula
                     while (names.MoveNext())
                     {
                         exprs.MoveNext();
-                        stream.Write($"NamedExprs(\"{names.Current},");
+                        stream.Write($"NamedExprs(\"{names.Current}\",");
                         GenerateExpr(stream, exprs.Current);
+                        stream.Write(",");
                         parenCount++;
                     }
 
-                    stream.Write(",NIL");
+                    stream.Write("NIL");
                     while (parenCount > 0)
                     {
                         stream.Write(")");
@@ -680,7 +702,7 @@ namespace Plang.Compiler.Backend.Formula
                 case NamedTupleAccessExpr e:
                     stream.Write("Field(");
                     GenerateExpr(stream, e.SubExpr);
-                    stream.Write($"{e.FieldName},{GenerateId()})");
+                    stream.Write($",\"{e.FieldName}\",{GenerateId()})");
                     break;
                 
                 case TupleAccessExpr e:
@@ -690,7 +712,7 @@ namespace Plang.Compiler.Backend.Formula
                     break;
                 
                 case VariableAccessExpr e:
-                    stream.Write($"Name({e.Variable.Name}");
+                    stream.Write($"Name(\"{e.Variable.Name}\"");
                     stream.Write($",{GenerateId()})");
                     break;
                
@@ -703,13 +725,18 @@ namespace Plang.Compiler.Backend.Formula
                 case LinearAccessRefExpr e:
                     if (e.LinearType == LinearType.Move)
                     {
-                        stream.Write($"Name({e.Variable.Name}");
+                        stream.Write($"Name(\"{e.Variable.Name}\"");
                         stream.Write($",{GenerateId()})");
                     }
                     break;
                 
                 case EventRefExpr e:
-                    stream.Write($"Name({e.Value.Name}");
+                    stream.Write($"Name(\"{e.Value.Name}\"");
+                    stream.Write($",{GenerateId()})");
+                    break;
+                
+                case EnumElemRefExpr e:
+                    stream.Write($"Name(\"{e.Value.Name}\"");
                     stream.Write($",{GenerateId()})");
                     break;
                 
@@ -718,6 +745,20 @@ namespace Plang.Compiler.Backend.Formula
                     GenerateExpr(stream, e.SetExpr);
                     stream.Write(",");
                     GenerateExpr(stream, e.IndexExpr);
+                    stream.Write($",{GenerateId()})");
+                    break;
+                
+                case MapAccessExpr e:
+                    stream.Write($"MapAcc(");
+                    GenerateExpr(stream, e.MapExpr);
+                    stream.Write(",");
+                    GenerateExpr(stream, e.IndexExpr);
+                    stream.Write($",{GenerateId()})");
+                    break;
+                
+                case ChooseExpr e:
+                    stream.Write($"Choose(");
+                    GenerateExpr(stream, e.SubExpr);
                     stream.Write($",{GenerateId()})");
                     break;
                 
@@ -764,7 +805,7 @@ namespace Plang.Compiler.Backend.Formula
 
         public void GenerateVariable(StringWriter stream, Variable v)
         {
-            stream.Write($"Name(\"{v.Name}\")");
+            stream.Write($"Name(\"{v.Name}\",{GenerateId()})");
         }
 
         public String GetEventName(PEvent evt)
@@ -779,7 +820,7 @@ namespace Plang.Compiler.Backend.Formula
             int parenCount = 0;
             foreach (KeyValuePair<PEvent, Function> kv in cases)
             {
-                stream.Write($"Cases(\"{GetEventName(kv.Key)}");
+                stream.Write($"Cases(\"{GetEventName(kv.Key)}\"");
                 stream.Write(",");
                 GenerateFunction(stream, kv.Value);
                 stream.Write(",");
@@ -789,7 +830,7 @@ namespace Plang.Compiler.Backend.Formula
             stream.Write("NIL");
             for (int i = 0; i < parenCount; i++)
             {
-                stream.Write(")");
+                stream.Write($",{GenerateId()})");
             }
         }
 
@@ -805,7 +846,9 @@ namespace Plang.Compiler.Backend.Formula
         {
             stream.Write($"InterfaceDecl(\"{intface.Name}\",");
             GenerateList(stream, "InterfaceType", intface.ReceivableEvents.Events,
-                e => e.Name);
+                e => "\""+e.Name+"\"");
+            stream.Write(",");
+            GenerateTypeExpr(stream, intface.PayloadType);
             stream.WriteLine($",{GenerateId()}).");
 
         }
@@ -827,9 +870,10 @@ namespace Plang.Compiler.Backend.Formula
         {
             stream.WriteLine($"MachineDecl(\"{machine.Name}\",{GenerateId()}).");
             stream.WriteLine($"MachineKind(\"{machine.Name}\", {MachineKind(machine)}).");
-            stream.WriteLine($"MachineStart(\"{machine.Name}\",\"{machine.StartState.Name}\").");
-            stream.WriteLine($"MachineProtoDecl(\"{machine.Name}\",");
+            stream.WriteLine($"MachineStart(\"{machine.Name}\",QualifiedName(\"{machine.StartState.Name}\",NIL)).");
+            stream.Write($"MachineProtoDecl(\"{machine.Name}\",");
             GenerateTypeExpr(stream, machine.PayloadType);
+            stream.WriteLine(").");
 
             if (machine.Receives != null)
             {
