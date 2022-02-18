@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using Antlr4.Runtime.Dfa;
 using Plang.Compiler.Backend.ASTExt;
@@ -24,7 +25,28 @@ namespace Plang.Compiler.Backend.Formula
             this.context = new CompilationContext(job);
 
             CompiledFile file = GenerateSource(globalScope);
-            return new List<CompiledFile> {file};
+            CompiledFile include = GenerateInclude(globalScope);
+            return new List<CompiledFile> {file, include};
+        }
+
+        public CompiledFile GenerateInclude(Scope globalScope)
+        {
+            CompiledFile include = new CompiledFile("P.4ml");
+            var assembly = Assembly.GetExecutingAssembly();
+            var resourceName = GetType().Namespace+".P.4ml";
+            using (Stream stream = assembly.GetManifestResourceStream(resourceName))
+            {
+                if (stream != null)
+                {
+                    using (StreamReader reader = new StreamReader(stream))
+                    {
+                        string result = reader.ReadToEnd();
+                        include.Stream.Write(result);
+                    }
+                }
+            }
+
+            return include;
         }
 
         public CompiledFile GenerateSource(Scope globalScope)

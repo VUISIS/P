@@ -25,4 +25,10 @@
       <CustomToolNamespace>Plang.Compiler</CustomToolNamespace>
     </Antlr4>
   </ItemGroup>
+  <ItemGroup>
+    <None Remove="Backend\Formula\P.4ml" />
+    <EmbeddedResource Include="Backend\Formula\P.4ml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </EmbeddedResource>
+  </ItemGroup>
 </Project>
