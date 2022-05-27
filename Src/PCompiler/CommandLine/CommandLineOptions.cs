@@ -81,11 +81,12 @@ namespace Plang.Compiler
             CommandlineOutput.WriteInfo("    -outputDir:[path]          -- where to write the generated files");
             CommandlineOutput.WriteInfo("    -aspectOutputDir:[path]    -- where to write the generated aspectj files");
             CommandlineOutput.WriteInfo("                                  if not supplied, use outputDir");
-            CommandlineOutput.WriteInfo("    -generate:[C,CSharp,RVM,Formula]   -- select a target language to generate");
+            CommandlineOutput.WriteInfo("    -generate:[C,CSharp,RVM,Formula,IL]   -- select a target language to generate");
             CommandlineOutput.WriteInfo("        C       : generate C code");
             CommandlineOutput.WriteInfo("        CSharp  : generate C# code ");
             CommandlineOutput.WriteInfo("        RVM     : generate RVM code");
             CommandlineOutput.WriteInfo("        Formula : generate Formula code");
+            CommandlineOutput.WriteInfo("        IL      : generate Intermediate Language code");
             CommandlineOutput.WriteInfo("    -h, -help, --help          -- display this help message");
             CommandlineOutput.WriteInfo("------------------------------------------");
         }

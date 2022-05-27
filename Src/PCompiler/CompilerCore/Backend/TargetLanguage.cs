@@ -3,6 +3,7 @@ using Plang.Compiler.Backend.CSharp;
 using Plang.Compiler.Backend.Rvm;
 using System.Collections.Generic;
 using Plang.Compiler.Backend.Formula;
+using Plang.Compiler.Backend.IntermediateLanguage;
 
 namespace Plang.Compiler.Backend
 {
@@ -17,6 +18,7 @@ namespace Plang.Compiler.Backend
             RegisterCodeGenerator(CompilerOutput.C, new CCodeGenerator());
             RegisterCodeGenerator(CompilerOutput.Rvm, new RvmCodeGenerator());
             RegisterCodeGenerator(CompilerOutput.Formula, new FormulaCodeGenerator());
+            RegisterCodeGenerator(CompilerOutput.IntermediateLanguage, new IntermediateLanguageCodeGenerator());
         }
 
         private static void RegisterCodeGenerator(CompilerOutput name, ICodeGenerator generator)

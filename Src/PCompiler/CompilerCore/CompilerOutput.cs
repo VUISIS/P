@@ -5,6 +5,7 @@ namespace Plang.Compiler
         C,
         CSharp,
         Formula,
+        IntermediateLanguage,
         Rvm
     }
 }

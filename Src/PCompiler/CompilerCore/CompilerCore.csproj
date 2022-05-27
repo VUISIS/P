@@ -30,5 +30,9 @@
     <EmbeddedResource Include="Backend\Formula\P.4ml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </EmbeddedResource>
+    <None Remove="Backend\IntermediateLanguage\Intermediate.4ml" />
+    <EmbeddedResource Include="Backend\IntermediateLanguage\Intermediate.4ml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </EmbeddedResource>
   </ItemGroup>
 </Project>

@@ -154,6 +154,10 @@ namespace Plang.Compiler
                                         outputLanguage = CompilerOutput.Formula;
                                         break;
 
+                                    case "il":
+                                        outputLanguage = CompilerOutput.IntermediateLanguage;
+                                        break;
+
                                     default:
                                         throw new CommandlineParsingError($"Unrecognized generate option '{colonArg}', expecting C or CSharp");
                                 }
@@ -352,8 +356,12 @@ namespace Plang.Compiler
                     outputLanguage = CompilerOutput.Formula;
                     break;
 
+                case "il":
+                    outputLanguage = CompilerOutput.IntermediateLanguage;
+                    break;
+
                 default:
-                    throw new CommandlineParsingError($"Expected C or CSharp as target, received {projectXml.Element("Target")?.Value}");
+                    throw new CommandlineParsingError($"Expected C, CSharp, rvm, Formula, or IL as target, received {projectXml.Element("Target")?.Value}");
             }
         }
 
