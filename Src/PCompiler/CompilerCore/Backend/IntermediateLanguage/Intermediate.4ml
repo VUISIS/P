@@ -19,10 +19,19 @@ domain Intermediate
     PortType ::= new (port : Port, type : String, dataType : String).
     PortRequires ::= new (port : Port, needs: Component).
     
+    EventGroup ::= new (name : String).
     Event ::= new (name : String).
+    EventInGroup ::= new (group : EventGroup, event : Event).
+    
     EventParameter ::= new (parent: Event, paramNumber: Integer, paramType: String).
     
-    ComponentEvent ::= new (component : Component, event : Event).
+    ComponentSendsEvent ::= new (component : Component, event : Event).
+    ComponentSendsEventGroup ::= new (component : Component, group : EventGroup).
+    ComponentReceivesEvent ::= new (component : Component, event : Event).
+    ComponentReceivesEventGroup ::= new (component : Component, group : EventGroup).
+    
+    ComponentSendsEvent(comp, event) :- ComponentSendsEventGroup(comp, group), EventInGroup(group, event).
+    ComponentReceivesEvent(comp, event) :- ComponentSendsEventGroup(comp, group), EventInGroup(group, event).
 
     Attributable ::= Component + Subcomponent + Connection + ConditionalConnection + ConditionalSubcomponent.
 
@@ -80,7 +89,10 @@ domain Intermediate
     PortSubcomponentConnection(port, comp) :- Connection(_, port, targetPort), port=Port(portParent,_),
         Subcomponent(parent, _, portParent), Subcomponent(parent, _, comp), targetPort=Port(comp, _).
     
-    ComponentEvent(comp, event) :- Inherit(parent, comp), ComponentEvent(parent, event).
+    ComponentSendsEvent(comp, event) :- Inherit(parent, comp), ComponentSendsEvent(parent, event).
+    ComponentSendsEventGroup(comp, eventGroup) :- Inherit(parent, comp), ComponentSendsEventGroup(parent, eventGroup).
+    ComponentReceivesEvent(comp, event) :- Inherit(parent, comp), ComponentReceivesEvent(parent, event).
+    ComponentReceivesEventGroup(comp, eventGroup) :- Inherit(parent, comp), ComponentReceivesEventGroup(parent, eventGroup).
     Subcomponent(comp, name, to) :- Inherit(parent, comp), Subcomponent(parent, name, to).
     ConditionalSubcomponent(comp, name, to, cond) :- Inherit(parent, comp), ConditionalSubcomponent(parent, name, to, cond).
     Requires(comp, needs) :- Inherit(parent, comp), Requires(parent, needs).

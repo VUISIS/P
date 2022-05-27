@@ -56,7 +56,7 @@ namespace Plang.Compiler.Backend.IntermediateLanguage
             //GenerateEnums(source.Stream, globalScope.Enums);
             //GenerateTypedefs(source.Stream, globalScope.Typedefs);
             GenerateEvents(source.Stream, globalScope.Events);
-//            GenerateEventSets(source.Stream, globalScope.EventSets);
+            GenerateEventSets(source.Stream, globalScope.EventSets);
 //            GenerateFunctions(source.Stream, globalScope.Functions);
 //            GenerateInterfaces(source.Stream, globalScope.Interfaces);
             Dictionary<String, Machine> machineMap = new Dictionary<string, Machine>();
@@ -234,7 +234,7 @@ namespace Plang.Compiler.Backend.IntermediateLanguage
         {
             foreach (var evt in events)
             {
-                stream.Write($"  Event(\"{evt.Name}\").\n");
+                stream.WriteLine($"  {evt.Name} is Event(\"{evt.Name}\").");
 //                GenerateEventType(stream, evt.Name, evt.PayloadType);
             }
         }
@@ -243,10 +243,11 @@ namespace Plang.Compiler.Backend.IntermediateLanguage
         {
             foreach (var eventSet in eventSets)
             {
-                stream.Write($"EventDecl(\"{eventSet.Name}\", ");
-                GenerateList(stream, "EventNameList", eventSet.Events,
-                    evt => evt.Name);
-                stream.WriteLine(").");
+                stream.WriteLine($"  {eventSet.Name} is EventGroup(\"{eventSet.Name}\").");
+                foreach (PEvent evt in eventSet.Events)
+                {
+                    stream.WriteLine($"  EventInGroup(\"{eventSet.Name}\", \"{evt.Name}\").");
+                }
             }
         }
 
@@ -959,6 +960,16 @@ namespace Plang.Compiler.Backend.IntermediateLanguage
             foreach (State state in machine.States)
             {
                 GenerateState(stream, state);
+            }
+
+            foreach (PEvent evt in machine.Sends.Events)
+            {
+                stream.WriteLine($"  ComponentSendsEvent({machine.Name}, {evt.Name}).");
+            }
+
+            foreach (PEvent evt in machine.Receives.Events)
+            {
+                stream.WriteLine($"  ComponentReceivesEvent({machine.Name}, {evt.Name}).");
             }
         }
 
