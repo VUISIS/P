@@ -975,7 +975,6 @@ namespace Plang.Compiler.Backend.IntermediateLanguage
 
         public String GetTypeName(PLanguageType plt)
         {
-            Console.WriteLine("Type name is "+plt);
                 switch (plt)
                 {
                 case DataType t:
@@ -1011,7 +1010,6 @@ namespace Plang.Compiler.Backend.IntermediateLanguage
             foreach (Variable var in machine.Fields)
             {
                 var typeName = GetTypeName(var.Type);
-                Console.WriteLine("Got typeName "+typeName+" for var "+var.Name);
                 if (typeName == null) continue;
                 if (machineMap.ContainsKey(typeName))
                 {
