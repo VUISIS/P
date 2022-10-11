@@ -1,23 +1,26 @@
 enum eCommand {
+    c_zero,
     c_read_setup,
     c_read_execute,
     c_program_setup,
     c_program_execute,
     c_erase_setup,
     c_erase_execute,
-    c_dummy,
-    gpio_get_status,
-    gpio_reset
+    c_dummy
 }
 
-type tIORegisterReadWrite = (status: int, command: eCommand, address: int, val: int);
+type tIORegisterReadWrite = (status: int, command: eCommand, address: int, val: int, write: bool);
 type tIORegister = (status: int, command: eCommand, address: int, val: int);
 type tGPIOStatus = bool;
+type tRegisterClient = machine;
 
 event eIORegisterReadWrite : tIORegisterReadWrite;
 event eIORegister : tIORegister;
 event eGPIOStatus : tGPIOStatus;
 event eBugState;
+event eGPIOGetStatus;
+event eGPIOReset;
+event eRegisterClient : tRegisterClient;
 
 machine Nand
 {
@@ -32,6 +35,7 @@ machine Nand
     var val: int;
     var ready: bool;
     var client: machine;
+    var timer: ReliableTimer;
 
     var cache: map[int,int];
     var blocks: map[int,map[int,map[int,int]]];
@@ -46,18 +50,23 @@ machine Nand
     }
 
     fun resetTimer() {
+        StartReliableTimer(timer);
         ready = false;
     }
     
     start state Init {
-        entry (clientRef : machine) {
-            client = clientRef;
+        entry {
+            timer = CreateReliableTimer(this);
             ready = true;
             clearCursor();
             status = 0;
             command = c_dummy;
             address = 0;
             val = 0;
+        }
+
+        on eRegisterClient do (clientRef: tRegisterClient) {
+            client = clientRef;
             goto s_initial_state;
         }
     }
@@ -124,210 +133,336 @@ machine Nand
 
     state s_initial_state {
         on eIORegisterReadWrite do (req: tIORegisterReadWrite) {
-            if (req.command == c_read_setup) {
+            if (!req.write) {
                 sendRegister(client);
-                goto s_read_awaiting_block_address;
-            }
-            else if (req.command == c_program_setup) {
-                sendRegister(client);
-                goto s_program_awaiting_block_address;
-            }
-            else if (req.command == c_erase_setup) {
-                sendRegister(client);
-                goto s_erase_awaiting_block_address;
-            }
-            else if (req.command == gpio_get_status) {
-                sendStatus(client);
-            }
-            else if (req.command == gpio_reset) {
-                goto Init;
-            }
-            else {
-                sendRegister(client);
-                fail();
+            } else {
+                if (req.command == c_read_setup) {
+                    goto s_read_awaiting_block_address;
+                }
+                else if (req.command == c_program_setup) {
+                    goto s_program_awaiting_block_address;
+                }
+                else if (req.command == c_erase_setup) {
+                    goto s_erase_awaiting_block_address;
+                }
+                else {
+                    fail();
+                }
             }
         }
+
+        on eGPIOGetStatus do {
+            sendStatus(client);
+        }
+
+        on eGPIOReset do {
+            goto Init;
+        }
+
+        on eReliableTimerStarted do {
+            ready = false;
+        }
     
+        on eReliableTimeOut do {
+            ready = true;
+        }
     }
 
     state s_bug {
         on eIORegisterReadWrite do (req: tIORegisterReadWrite) {
-            if (req.command == gpio_reset) {
-                goto Init;
+            if (!req.write) {
+                sendRegister(client);
             }
-            sendRegister(client);
             goto s_bug;
+        }
+
+        on eGPIOGetStatus do {
+            sendStatus(client);
+        }
+
+        on eGPIOReset do {
+            goto Init;
+        }
+
+        on eReliableTimerStarted do {
+            ready = false;
+        }
+    
+        on eReliableTimeOut do {
+            ready = true;
         }
     }
 
     state s_read_awaiting_block_address {
         on eIORegisterReadWrite do (req: tIORegisterReadWrite) {
-            if (req.command == gpio_get_status) {
-                sendStatus(client);
-            }
-            else if (req.command == gpio_reset) {
-                goto Init;
-            }
-            else if (!reachedDeadline() || req.command != c_read_setup) {
+            if (!req.write) {
                 sendRegister(client);
-                fail();
             } else {
-                blockAddress = req.address;
-                sendRegister(client);
-                goto s_read_awaiting_page_address;
+                if (!reachedDeadline() || req.command != c_read_setup) {
+                    fail();
+                } else {
+                    blockAddress = req.address;
+                    resetTimer();
+                    goto s_read_awaiting_page_address;
+                }
             }
+        }
+
+        on eGPIOGetStatus do {
+            sendStatus(client);
+        }
+
+        on eGPIOReset do {
+            goto Init;
+        }
+
+        on eReliableTimerStarted do {
+            ready = false;
+        }
+    
+        on eReliableTimeOut do {
+            ready = true;
         }
     }
 
     state s_read_awaiting_page_address {
         on eIORegisterReadWrite do (req: tIORegisterReadWrite) {
-            if (req.command == gpio_get_status) {
-                sendStatus(client);
-            }
-            else if (req.command == gpio_reset) {
-                goto Init;
-            }
-            else if (!reachedDeadline() || req.command != c_read_setup) {
+            if (!req.write) {
                 sendRegister(client);
-                fail();
             } else {
-                pageAddress = req.address;
-                sendRegister(client);
-                goto s_read_awaiting_byte_address;
+                if (!reachedDeadline() || req.command != c_read_setup) {
+                    fail();
+                } else {
+                    pageAddress = req.address;
+                    resetTimer();
+                    goto s_read_awaiting_byte_address;
+                }
             }
+        }
+
+        on eGPIOGetStatus do {
+            sendStatus(client);
+        }
+
+        on eGPIOReset do {
+            goto Init;
+        }
+
+        on eReliableTimerStarted do {
+            ready = false;
+        }
+    
+        on eReliableTimeOut do {
+            ready = true;
         }
     }
 
     state s_read_awaiting_byte_address {
         on eIORegisterReadWrite do (req: tIORegisterReadWrite) {
-            if (req.command == gpio_get_status) {
-                sendStatus(client);
-            }
-            else if (req.command == gpio_reset) {
-                goto Init;
-            }
-            else if (!reachedDeadline() || req.command != c_read_setup) {
+            if (!req.write) {
                 sendRegister(client);
-                fail();
             } else {
-                byteAddress = req.address;
-                sendRegister(client);
-                goto s_read_awaiting_execute;
+                if (!reachedDeadline() || req.command != c_read_setup) {
+                    sendRegister(client);
+                    fail();
+                } else {
+                    byteAddress = req.address;
+                    sendRegister(client);
+                    resetTimer();
+                    goto s_read_awaiting_execute;
+                }
             }
+        }
+
+        on eGPIOGetStatus do {
+            sendStatus(client);
+        }
+
+        on eGPIOReset do {
+            goto Init;
+        }
+
+        on eReliableTimerStarted do {
+            ready = false;
+        }
+    
+        on eReliableTimeOut do {
+            ready = true;
         }
     }
 
 
     state s_read_awaiting_execute {
         on eIORegisterReadWrite do (req: tIORegisterReadWrite) {
-            if (req.command == gpio_get_status) {
-                sendStatus(client);
-            }
-            else if (req.command == gpio_reset) {
-                goto Init;
-            }
-            else if (!reachedDeadline() || req.command != c_read_execute) {
-                fail();
+            if (!req.write) {
+                sendRegister(client);
             } else {
-                goto s_read_providing_data;
+                if (!reachedDeadline() || req.command != c_read_execute) {
+                    fail();
+                } else {
+                    resetTimer();
+                    goto s_read_providing_data;
+                }
             }
+        }
+
+        on eGPIOGetStatus do {
+            sendStatus(client);
+        }
+
+        on eGPIOReset do {
+            goto Init;
+        }
+
+        on eReliableTimerStarted do {
+            ready = false;
+        }
+    
+        on eReliableTimeOut do {
+            ready = true;
         }
     }
 
 
     state s_read_providing_data {
         on eIORegisterReadWrite do (req: tIORegisterReadWrite) {
-            if (req.command == gpio_get_status) {
-                sendStatus(client);
-            }
-            else if (req.command == gpio_reset) {
-                goto Init;
-            }
-            else if (req.command == c_read_setup) {
-                clearCursor();
-                ready = true;
-                sendStatus(client);
-                goto s_read_awaiting_block_address;
-            }
-            else if (req.command == c_program_setup) {
-                clearCursor();
-                ready = true;
-                sendStatus(client);
-                goto s_program_awaiting_block_address;
-            }
-            else if (req.command == c_erase_setup) {
-                clearCursor();
-                ready = true;
-                sendStatus(client);
-                goto s_erase_awaiting_block_address;
-            }
-            else if (!reachedDeadline() || req.command != c_read_execute) {
-                fail();
-            } else {
+            if (!req.write) {
                 val = getFromMemory();
-                sendStatus(client);
+                sendRegister(client);
                 stepAddress();
-                resetTimer();
+            } else {
+                if (req.command == c_read_setup) {
+                    clearCursor();
+                    ready = true;
+                    goto s_read_awaiting_block_address;
+                }
+                else if (req.command == c_program_setup) {
+                    clearCursor();
+                    ready = true;
+                    goto s_program_awaiting_block_address;
+                }
+                else if (req.command == c_erase_setup) {
+                    clearCursor();
+                    ready = true;
+                    goto s_erase_awaiting_block_address;
+                }
+                else if (!reachedDeadline() || req.command != c_read_execute) {
+                    fail();
+                } else {
+                    fail();
+                }
             }
+        }
+
+        on eGPIOGetStatus do {
+            sendStatus(client);
+        }
+
+        on eGPIOReset do {
+            goto Init;
+        }
+
+        on eReliableTimerStarted do {
+            ready = false;
+        }
+    
+        on eReliableTimeOut do {
+            ready = true;
         }
     }
 
 
     state s_program_awaiting_block_address {
         on eIORegisterReadWrite do (req: tIORegisterReadWrite) {
-            if (req.command == gpio_get_status) {
-                sendStatus(client);
-            }
-            else if (req.command == gpio_reset) {
-                goto Init;
-            }
-            else if (!reachedDeadline() || req.command != c_program_setup) {
+            if (!req.write) {
                 sendRegister(client);
-                fail();
             } else {
-                blockAddress = req.address;
-                sendRegister(client);
-                goto s_program_awaiting_page_address;
+                if (!reachedDeadline() || req.command != c_program_setup) {
+                    fail();
+                } else {
+                    blockAddress = req.address;
+                    goto s_program_awaiting_page_address;
+                }
             }
+        }
+
+        on eGPIOGetStatus do {
+            sendStatus(client);
+        }
+
+        on eGPIOReset do {
+            goto Init;
+        }
+
+        on eReliableTimerStarted do {
+            ready = false;
+        }
+    
+        on eReliableTimeOut do {
+            ready = true;
         }
     }
 
 
     state s_program_awaiting_page_address {
         on eIORegisterReadWrite do (req: tIORegisterReadWrite) {
-            if (req.command == gpio_get_status) {
-                sendStatus(client);
-            }
-            else if (req.command == gpio_reset) {
-                goto Init;
-            }
-            else if (!reachedDeadline() || req.command != c_program_setup) {
+            if (!req.write) {
                 sendRegister(client);
-                fail();
             } else {
-                pageAddress = req.address;
-                sendRegister(client);
-                goto s_program_awaiting_byte_address;
+                if (!reachedDeadline() || req.command != c_program_setup) {
+                    fail();
+                } else {
+                    pageAddress = req.address;
+                    goto s_program_awaiting_byte_address;
+                }
             }
+        }
+
+        on eGPIOGetStatus do {
+            sendStatus(client);
+        }
+
+        on eGPIOReset do {
+            goto Init;
+        }
+
+        on eReliableTimerStarted do {
+            ready = false;
+        }
+    
+        on eReliableTimeOut do {
+            ready = true;
         }
     }
 
     state s_program_awaiting_byte_address {
         on eIORegisterReadWrite do (req: tIORegisterReadWrite) {
-            if (req.command == gpio_get_status) {
-                sendStatus(client);
-            }
-            else if (req.command == gpio_reset) {
-                goto Init;
-            }
-            else if (!reachedDeadline() || req.command != c_program_setup) {
+            if (!req.write) {
                 sendRegister(client);
-                fail();
             } else {
-                byteAddress = req.address;
-                sendRegister(client);
-                goto s_program_accepting_data;
+                if (!reachedDeadline() || req.command != c_program_setup) {
+                    fail();
+                } else {
+                    byteAddress = req.address;
+                    goto s_program_accepting_data;
+                }
             }
+        }
+
+        on eGPIOGetStatus do {
+            sendStatus(client);
+        }
+
+        on eGPIOReset do {
+            goto Init;
+        }
+
+        on eReliableTimerStarted do {
+            ready = false;
+        }
+    
+        on eReliableTimeOut do {
+            ready = true;
         }
     }
 
@@ -336,71 +471,93 @@ machine Nand
             var i : int;
             var addr : int;
             var addrs : seq[int];
-            if (req.command == gpio_get_status) {
-                sendStatus(client);
-            }
-            else if (req.command == gpio_reset) {
-                goto Init;
-            }
-            else if (req.command == c_read_setup) {
-                clearCursor();
-                ready = true;
-                sendStatus(client);
-                goto s_read_awaiting_block_address;
-            }
-            else if (req.command == c_program_setup) {
-                cache[byteAddress] = req.val;
-                byteAddress = byteAddress + 1;
-                if (byteAddress >= 256) {
-                    byteAddress = 0;
-                }
+            if (!req.write) {
                 sendRegister(client);
-                resetTimer();
-            }
-            else if (req.command == c_erase_setup) {
-                clearCursor();
-                ready = true;
-                sendStatus(client);
-                goto s_erase_awaiting_block_address;
-            }
-            else if (!reachedDeadline() || req.command != c_program_execute) {
-                fail();
             } else {
-                i = 0;
-                addrs = keys(cache);
-                while (i < sizeof(addrs)) {
-                    setInMemory(addr, cache[addrs[i]]);
-                    i = i + 1;
+                if (req.command == c_read_setup) {
+                    clearCursor();
+                    ready = true;
+                    goto s_read_awaiting_block_address;
                 }
-                pageAddress = pageAddress + 1;
-                if (pageAddress >= 256) {
-                    pageAddress = 0;
-                    blockAddress = blockAddress + 1;
-                    if (blockAddress >= 256) {
-                        blockAddress = 0;
+                else if (req.command == c_program_setup) {
+                    cache[byteAddress] = req.val;
+                    byteAddress = byteAddress + 1;
+                    if (byteAddress >= 256) {
+                        byteAddress = 0;
                     }
                 }
-                resetTimer();
+                else if (req.command == c_erase_setup) {
+                    clearCursor();
+                    ready = true;
+                    goto s_erase_awaiting_block_address;
+                }
+                else if (!reachedDeadline() || req.command != c_program_execute) {
+                    fail();
+                } else {
+                    i = 0;
+                    addrs = keys(cache);
+                    while (i < sizeof(addrs)) {
+                        setInMemory(addr, cache[addrs[i]]);
+                        i = i + 1;
+                    }
+                    pageAddress = pageAddress + 1;
+                    if (pageAddress >= 256) {
+                        pageAddress = 0;
+                        blockAddress = blockAddress + 1;
+                        if (blockAddress >= 256) {
+                            blockAddress = 0;
+                        }
+                    }
+                    resetTimer();
+                }
             }
+        }
+
+        on eGPIOGetStatus do {
+            sendStatus(client);
+        }
+
+        on eGPIOReset do {
+            goto Init;
+        }
+
+        on eReliableTimerStarted do {
+            ready = false;
+        }
+    
+        on eReliableTimeOut do {
+            ready = true;
         }
     }
 
     state s_erase_awaiting_block_address {
         on eIORegisterReadWrite do (req: tIORegisterReadWrite) {
-            if (req.command == gpio_get_status) {
-                sendStatus(client);
-            }
-            else if (req.command == gpio_reset) {
-                goto Init;
-            }
-            else if (!reachedDeadline() || req.command != c_erase_setup) {
+            if (!req.write) {
                 sendRegister(client);
-                fail();
             } else {
-                blockAddress = req.address;
-                sendRegister(client);
-                goto s_erase_awaiting_execute;
+                if (!reachedDeadline() || req.command != c_erase_setup) {
+                    fail();
+                } else {
+                    blockAddress = req.address;
+                    goto s_erase_awaiting_execute;
+                }
             }
+        }
+
+        on eGPIOGetStatus do {
+            sendStatus(client);
+        }
+
+        on eGPIOReset do {
+            goto Init;
+        }
+
+        on eReliableTimerStarted do {
+            ready = false;
+        }
+    
+        on eReliableTimeOut do {
+            ready = true;
         }
     }
 
@@ -408,18 +565,31 @@ machine Nand
     state s_erase_awaiting_execute {
         on eIORegisterReadWrite do (req: tIORegisterReadWrite) {
             var newBlock : map[int,map[int,int]];
-            if (req.command == gpio_get_status) {
-                sendStatus(client);
-            }
-            else if (req.command == gpio_reset) {
-                goto Init;
-            }
-            else if (!reachedDeadline() || req.command != c_erase_execute) {
-                fail();
-            } else {
-                blocks[blockAddress] = newBlock;
+            if (!req.write) {
                 sendRegister(client);
+            } else {
+                if (!reachedDeadline() || req.command != c_erase_execute) {
+                    fail();
+                } else {
+                    blocks[blockAddress] = newBlock;
+                }
             }
+        }
+
+        on eGPIOGetStatus do {
+            sendStatus(client);
+        }
+
+        on eGPIOReset do {
+            goto Init;
+        }
+
+        on eReliableTimerStarted do {
+            ready = false;
+        }
+    
+        on eReliableTimeOut do {
+            ready = true;
         }
     }
 }

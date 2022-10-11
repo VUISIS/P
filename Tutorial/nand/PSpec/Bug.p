@@ -1,5 +1,5 @@
 spec NoBugState
-observes eBugState, eIORegisterReadWrite
+observes eBugState, eIORegisterReadWrite, eGPIOReset
 {
     start state Init {
         on eBugState goto Error;
@@ -16,11 +16,9 @@ observes eBugState, eIORegisterReadWrite
     state Error {
         on eBugState goto Error;
         on eIORegisterReadWrite do (req: tIORegisterReadWrite) {
-            if (req.command == gpio_reset) {
-                goto ReadWrite;
-            }
             goto Error;
         }
+        on eGPIOReset goto ReadWrite;
     }
 }
 
