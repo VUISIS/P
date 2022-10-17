@@ -21,6 +21,7 @@ event eBugState;
 event eGPIOGetStatus;
 event eGPIOReset;
 event eRegisterClient : tRegisterClient;
+event eRegisterClientResp;
 
 machine Nand
 {
@@ -41,12 +42,7 @@ machine Nand
     var blocks: map[int,map[int,map[int,int]]];
 
     fun reachedDeadline() : bool {
-        if ($) {
-            ready = true;
-            return true;
-        } else {
-            return false;
-        }
+        return ready;
     }
 
     fun resetTimer() {
@@ -67,6 +63,7 @@ machine Nand
 
         on eRegisterClient do (clientRef: tRegisterClient) {
             client = clientRef;
+            send client, eRegisterClientResp;
             goto s_initial_state;
         }
     }
@@ -145,7 +142,7 @@ machine Nand
                 else if (req.command == c_erase_setup) {
                     goto s_erase_awaiting_block_address;
                 }
-                else {
+                else if (req.command != c_dummy) {
                     fail();
                 }
             }
@@ -378,6 +375,12 @@ machine Nand
                 sendRegister(client);
             } else {
                 if (!reachedDeadline() || req.command != c_program_setup) {
+                    if (req.command != c_program_setup) {
+                        print "s_program_awaiting_block_address req.command was not c_program_setup";
+                    } else {
+                        print "s_program_awaiting_block_address not ready";
+                    }
+                
                     fail();
                 } else {
                     blockAddress = req.address;

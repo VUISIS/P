@@ -45,12 +45,16 @@ machine Alpha {
             command = c_dummy;
             address = 0;
             val = 0;
-            send nandDevice, eRegisterClient, this;
+        }
+
+        on eRegisterClientResp do {
+            send client, eRegisterClientResp;
+            goto AwaitingCommand;
         }
 
         on eRegisterClient do (clientRef: tRegisterClient) {
             client = clientRef;
-            goto AwaitingCommand;
+            send nandDevice, eRegisterClient, this;
         }
     }
 

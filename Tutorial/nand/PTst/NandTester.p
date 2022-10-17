@@ -39,9 +39,16 @@ machine NandTester
     start state Init {
         entry (dr: tNandTesterInit) {
             driver = dr;
+
         }
         on eRegisterClient do (clientRef: tRegisterClient) {
             client = clientRef;
+
+            send driver, eRegisterClient, this;
+        }
+
+        on eRegisterClientResp do {
+            send client, eRegisterClientResp;
             goto testloop;
         }
     }

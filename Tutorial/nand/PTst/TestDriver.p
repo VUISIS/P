@@ -9,9 +9,13 @@ machine TestAlphaSingleRW {
             nand = new Nand();
             alpha = new Alpha(nand);
             testRT = new TestRoundTrip(alpha);
+
             send testRT, eRegisterClient, this;
+        }
+        on eRegisterClientResp do {
             goto RunTest;
         }
+
     }
 
     state RunTest {

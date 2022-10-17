@@ -23,11 +23,15 @@ machine TestRoundTrip {
         entry (init: tNandTesterInit) {
             tester = new NandTester(init);
 
-            send init, eRegisterClient, this;
         }
 
         on eRegisterClient do (clientRef: tRegisterClient) {
             client = clientRef;
+            send tester, eRegisterClient, this;
+        }
+
+        on eRegisterClientResp do {
+            send client, eRegisterClientResp;
             goto awaitRequest;
         }
     }
