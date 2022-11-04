@@ -4,6 +4,8 @@ type tTestBuffer = (buffer: seq[int], len: int);
 type tTestReadWrite = (blockAddress: int, pageAddress: int, byteAddress: int, len: int);
 type tTestReadWriteResp = int;
 
+type tRoundTripInit = machine;
+
 event eTestingWrite: tTestBuffer;
 event eTestingRead: tTestBuffer;
 
@@ -13,16 +15,15 @@ event eTestReadWriteResp : tTestReadWriteResp;
 machine TestRoundTrip {
     var testSendBuffer: seq[int];
     var testSendLen: int;
-    var tester: NandTester;
+    var tester: machine;
     var client: machine;
     var blockAddress: int;
     var pageAddress: int;
     var byteAddress: int;
 
     start state Init {
-        entry (init: tNandTesterInit) {
-            tester = new NandTester(init);
-
+        entry (init: tRoundTripInit) {
+            tester = init;
         }
 
         on eRegisterClient do (clientRef: tRegisterClient) {

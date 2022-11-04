@@ -1,30 +1,5 @@
 
-enum eRegisterPart {
-    reg_status,
-    reg_command,
-    reg_address,
-    reg_val
-}
-
-type tSetNandRegister = (offset: eRegisterPart, val: int);
-type tWait = int;
-type tWaitResp = int;
-type tRead = int;
-type tReadResp = (buffer: seq[int], len: int);
-type tProgram = (buffer: seq[int], len: int);
-type tProgramResp = int;
-
-type tDriverInit = (client: machine, device: Nand);
-
-event eSetNandRegister : tSetNandRegister;
-event eWait : tWait;
-event eWaitResp : tWaitResp;
-event eRead : tRead;
-event eReadResp : tReadResp;
-event eProgram : tProgram;
-event eProgramResp : tProgramResp;
-
-machine Alpha {
+machine Alpha5 {
     var nandDevice: Nand;
     var kernelTimeout : ReliableTimer;
     var client : machine;
@@ -97,7 +72,7 @@ machine Alpha {
             var newBuffer: seq[int];
             var regRead: tIORegisterReadWrite;
             readBuff = newBuffer;
-            numToRead = req;
+            numToRead = 8 * (req / 8);
             regRead = (status=status, command=command, address=address, val=val, write=false);
             send nandDevice, eIORegisterReadWrite, regRead;
             goto Reading;
@@ -107,11 +82,14 @@ machine Alpha {
             var regWrite: tIORegisterReadWrite;
             var programResp: tProgramResp;
             var numWritten: int;
+            var numToWrite: int;
             numWritten = 0;
             if (req.len < 1) {
                 goto AwaitingCommand;
             }
-            while (numWritten < req.len) {
+            numToWrite = 8 * (numToWrite / 8);
+                
+            while (numWritten < numToWrite && (numToWrite == 8 * (numToWrite / 8))) {
                 regWrite = (status=status, command=c_program_setup, address=address, val=req.buffer[numWritten], write=true);
                 send nandDevice, eIORegisterReadWrite, regWrite;
                 numWritten = numWritten + 1;

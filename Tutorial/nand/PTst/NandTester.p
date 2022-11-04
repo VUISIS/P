@@ -77,7 +77,7 @@ machine NandTester
     state sendAddress {
         entry {
             var setReq: tSetNandRegister;
-            var waitReq: tWait;
+            var writeReq: tProgram;
             setReq = (offset=reg_address, val=blockAddress);
             send driver, eSetNandRegister, setReq;
     
@@ -89,67 +89,11 @@ machine NandTester
 
             send driver, eSetNandRegister, setReq;
     
-            waitReq = 0;
-            send driver, eWait, waitReq;
-    
-            goto awaitingBlockSetDone;
-        }
-    }
-
-    state awaitingBlockSetDone {
-        on eWaitResp do (resp: tWaitResp) {
-            var setReq: tSetNandRegister;
-            var waitReq: tWait;
-            
-            if (resp == -1) {
-                sendFailure();
-                goto testloop;
-            }
-
             setReq = (offset=reg_address, val=pageAddress);
             send driver, eSetNandRegister, setReq;
-
-            waitReq = 0;
-            send driver, eWait, waitReq;
-
-            goto awaitingPageSetDone;
-        }
-    }
-
-    state awaitingPageSetDone {
-        on eWaitResp do (resp: tWaitResp) {
-            var setReq: tSetNandRegister;
-            var waitReq: tWait;
-            
-            if (resp == -1) {
-                sendFailure();
-                goto testloop;
-            }
-
+    
             setReq = (offset=reg_address, val=byteAddress);
             send driver, eSetNandRegister, setReq;
-
-            if (reading) {
-                setReq = (offset=reg_command, val=2);
-            } else {
-                setReq = (offset=reg_command, val=4);
-            }
-
-            waitReq = 0;
-            send driver, eWait, waitReq;
-
-            goto awaitingByteSetDone;
-        }
-    }
-
-    state awaitingByteSetDone {
-        on eWaitResp do (resp: tWaitResp) {
-            var writeReq: tProgram;
-            
-            if (resp == -1) {
-                sendFailure();
-                goto testloop;
-            }
 
             if (reading) {
                 send driver, eRead, bytes;

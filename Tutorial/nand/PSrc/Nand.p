@@ -134,12 +134,18 @@ machine Nand
                 sendRegister(client);
             } else {
                 if (req.command == c_read_setup) {
+                    clearCursor();
+                    ready = true;
                     goto s_read_awaiting_block_address;
                 }
                 else if (req.command == c_program_setup) {
+                    clearCursor();
+                    ready = true;
                     goto s_program_awaiting_block_address;
                 }
                 else if (req.command == c_erase_setup) {
+                    clearCursor();
+                    ready = true;
                     goto s_erase_awaiting_block_address;
                 }
                 else if (req.command != c_dummy) {
@@ -199,7 +205,6 @@ machine Nand
                     fail();
                 } else {
                     blockAddress = req.address;
-                    resetTimer();
                     goto s_read_awaiting_page_address;
                 }
             }
@@ -231,7 +236,6 @@ machine Nand
                     fail();
                 } else {
                     pageAddress = req.address;
-                    resetTimer();
                     goto s_read_awaiting_byte_address;
                 }
             }
@@ -297,7 +301,6 @@ machine Nand
                 if (!reachedDeadline() || req.command != c_read_execute) {
                     fail();
                 } else {
-                    resetTimer();
                     goto s_read_providing_data;
                 }
             }
@@ -575,6 +578,7 @@ machine Nand
                     fail();
                 } else {
                     blocks[blockAddress] = newBlock;
+                    resetTimer();
                 }
             }
         }
