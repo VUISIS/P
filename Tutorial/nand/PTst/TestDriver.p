@@ -110,56 +110,38 @@ machine TestFoxtrot0SingleRW {
     }
 }
 
-/*
-machine TestFoxtrot4SingleRW {
+machine TestFoxtrot1SingleRW {
     var testRT: TestRoundTrip;
 
     start state Init {
         entry {
-            var foxtrot: Foxtrot4;
+            var foxtrot: Foxtrot1;
             var testRW: TestFoxtrotSingleRW;
             var nand: Nand;
             nand = new Nand();
-            foxtrot = new Foxtrot4(nand);
+            foxtrot = new Foxtrot1(nand);
             testRW = new TestFoxtrotSingleRW(foxtrot);
             testRT = new TestRoundTrip(foxtrot);
         }
     }
 }
 
-machine TestFoxtrot5SingleRW {
+machine TestFoxtrot2SingleRW {
     var testRT: TestRoundTrip;
 
     start state Init {
         entry {
-            var foxtrot: Foxtrot5;
+            var foxtrot: Foxtrot2;
             var testRW: TestFoxtrotSingleRW;
             var nand: Nand;
             nand = new Nand();
-            foxtrot = new Foxtrot5(nand);
+            foxtrot = new Foxtrot2(nand);
             testRW = new TestFoxtrotSingleRW(foxtrot);
             testRT = new TestRoundTrip(foxtrot);
         }
     }
 }
 
-machine TestFoxtrot6SingleRW {
-    var testRT: TestRoundTrip;
-
-    start state Init {
-        entry {
-            var foxtrot: Foxtrot6;
-            var testRW: TestFoxtrotSingleRW;
-            var nand: Nand;
-            nand = new Nand();
-            foxtrot = new Foxtrot6(nand);
-            testRW = new TestFoxtrotSingleRW(foxtrot);
-            testRT = new TestRoundTrip(foxtrot);
-        }
-    }
-}
-
-*/
 machine TestFoxtrotSingleRW {
     var testRT: TestRoundTrip;
 

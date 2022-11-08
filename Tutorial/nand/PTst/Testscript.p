@@ -12,3 +12,9 @@ test alpha6Single [main=TestAlpha6SingleRW]:
 
 test foxtrot0Single [main=TestFoxtrot0SingleRW]:
     assert ReadWriteOK in (union NandFoxtrot, {TestFoxtrotSingleRW, TestFoxtrot0SingleRW});
+
+test foxtrot1Single [main=TestFoxtrot1SingleRW]:
+    assert ReadWriteOK in (union NandFoxtrot, {TestFoxtrotSingleRW, TestFoxtrot1SingleRW});
+
+test foxtrot2Single [main=TestFoxtrot2SingleRW]:
+    assert ReadWriteOK in (union NandFoxtrot, {TestFoxtrotSingleRW, TestFoxtrot2SingleRW});

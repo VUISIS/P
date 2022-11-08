@@ -268,7 +268,6 @@ machine Nand
                     fail();
                 } else {
                     byteAddress = req.address;
-                    sendRegister(client);
                     resetTimer();
                     goto s_read_awaiting_execute;
                 }

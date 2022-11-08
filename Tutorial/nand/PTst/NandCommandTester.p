@@ -71,6 +71,18 @@ machine NandCommandTester
             opInstrs += (2, opInstr);
             opInstr = (cmdType=nand_op_data_out_instr, ctx=(cmd=(opcode=1,), addr=emptyAddrs, dat=emptyData, waitrdy=emptyWait));
             opInstrs += (3, opInstr);
+            opInstr = (cmdType=nand_op_addr_instr, ctx=(cmd=(opcode=1,), addr=(naddrs=3,addrs=addrs),dat=emptyData,waitrdy=emptyWait));
+            opInstrs += (4, opInstr);
+            opInstr = (cmdType=nand_op_waitrdy_instr, ctx=(cmd=(opcode=1,), addr=emptyAddrs, dat=emptyData, waitrdy=emptyWait));
+            opInstrs += (5, opInstr);
+            opInstr = (cmdType=nand_op_data_out_instr, ctx=(cmd=(opcode=1,), addr=emptyAddrs, dat=emptyData, waitrdy=emptyWait));
+            opInstrs += (6, opInstr);
+            opInstr = (cmdType=nand_op_addr_instr, ctx=(cmd=(opcode=1,), addr=(naddrs=3,addrs=addrs),dat=emptyData,waitrdy=emptyWait));
+            opInstrs += (7, opInstr);
+            opInstr = (cmdType=nand_op_waitrdy_instr, ctx=(cmd=(opcode=1,), addr=emptyAddrs, dat=emptyData, waitrdy=emptyWait));
+            opInstrs += (8, opInstr);
+            opInstr = (cmdType=nand_op_data_out_instr, ctx=(cmd=(opcode=1,), addr=emptyAddrs, dat=emptyData, waitrdy=emptyWait));
+            opInstrs += (9, opInstr);
             send driver, eOpReq, (commands=opInstrs,);
             reading = true;
             goto awaitReply;
