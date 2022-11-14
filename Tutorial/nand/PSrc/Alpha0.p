@@ -36,6 +36,7 @@ machine Alpha0 {
     var readBuff: seq[int];
     var numToRead: int;
     var numRead: int;
+    var numWritten: int;
 
     start state Init {
         entry (dev: Nand) {
@@ -76,7 +77,7 @@ machine Alpha0 {
                     command = c_erase_setup;
                 } else if (req.val == 6) {
                     command = c_erase_execute;
-                } else if (req.val == 6) {
+                } else if (req.val == 7) {
                     command = c_dummy;
                 }
             } else if (req.offset == reg_address) {
@@ -106,7 +107,6 @@ machine Alpha0 {
         on eProgram do (req: tProgram) {
             var regWrite: tIORegisterReadWrite;
             var programResp: tProgramResp;
-            var numWritten: int;
             numWritten = 0;
             if (req.len < 1) {
                 goto AwaitingCommand;
@@ -117,6 +117,7 @@ machine Alpha0 {
                 send nandDevice, eIORegisterReadWrite, regWrite;
                 numWritten = numWritten + 1;
             }
+
             programResp = numWritten;
             send client, eProgramResp, programResp;
             goto AwaitingCommand;
@@ -136,8 +137,10 @@ machine Alpha0 {
         on eGPIOStatus do (ready: bool) {
             if (ready) {
                 send client, eWaitResp, 0;
+                command = c_zero;
                 goto AwaitingCommand;
             }
+            send nandDevice, eGPIOGetStatus;
         }
 
         on eReliableTimerStarted do {
@@ -147,6 +150,7 @@ machine Alpha0 {
         on eReliableTimeOut do {
             timedOut = true;
             send client, eWaitResp, -1;
+            command = c_zero;
             goto AwaitingCommand;
         }
     }
@@ -160,9 +164,10 @@ machine Alpha0 {
             if (numRead >= numToRead) {
                 readResp = (buffer=readBuff, len=numRead);
                 send client, eReadResp, readResp;
+                goto AwaitingCommand;
+            } else {
                 regRead = (status=status, command=command, address=address, val=val, write=false);
                 send nandDevice, eIORegisterReadWrite, regRead;
-                goto AwaitingCommand;
             }
         }
 

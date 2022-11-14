@@ -1,4 +1,4 @@
-spec ReadWriteOK observes eTestingWrite, eTestingRead {
+spec ReadWriteOK observes eWriteTestRequest, eWriteTestResponse, eReadTestResponse {
     var lastWriteBuffer: seq[int];
     var lastWriteLen: int;
 
@@ -9,14 +9,35 @@ spec ReadWriteOK observes eTestingWrite, eTestingRead {
     }
 
     state watchRequests {
-        on eTestingWrite do (req: tTestBuffer) {
+        on eWriteTestRequest do (req: tWriteTestRequest) {
             lastWriteBuffer = req.buffer;
             lastWriteLen = req.len;
+            goto awaitWriteResponse;
         }
+    }
 
-        on eTestingRead do (req: tTestBuffer) {
-            assert req.len >= 0,
-                format ("read-write failed with error {0}", req.len);
+    hot state awaitWriteResponse {
+        on eWriteTestResponse do (resp: tWriteTestResponse) {
+            assert resp >= 0,
+                format ("write request got error response {0}", resp);
+            goto awaitReadResponse;
+        }
+    }
+
+    hot state awaitReadResponse {
+        on eReadTestResponse do (resp: tReadTestResponse) {
+            var i: int;
+            assert resp.len >= 0,
+                format ("read request got error response {0}", resp.len);
+            assert resp.len == lastWriteLen,
+                format("number of bytes read ({0}) != number of bytes written ({1})", resp.len, lastWriteLen);
+            i = 0;
+            while (i < resp.len) {
+                assert resp.buffer[i] == lastWriteBuffer[i],
+                    format("read buffer does not match write buffer at location {0}, {1} != {2}", i, resp.buffer[i], lastWriteBuffer[i]);
+                i = i + 1;
+            }
+            goto watchRequests;
         }
     }
 }

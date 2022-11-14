@@ -41,7 +41,7 @@ machine Nand
     var cache: map[int,int];
     var blocks: map[int,map[int,map[int,int]]];
 
-    fun reachedDeadline() : bool {
+    fun ready() : bool {
         return ready;
     }
 
@@ -201,7 +201,7 @@ machine Nand
             if (!req.write) {
                 sendRegister(client);
             } else {
-                if (!reachedDeadline() || req.command != c_read_setup) {
+                if (!ready() || req.command != c_read_setup) {
                     fail();
                 } else {
                     blockAddress = req.address;
@@ -232,7 +232,7 @@ machine Nand
             if (!req.write) {
                 sendRegister(client);
             } else {
-                if (!reachedDeadline() || req.command != c_read_setup) {
+                if (!ready() || req.command != c_read_setup) {
                     fail();
                 } else {
                     pageAddress = req.address;
@@ -263,12 +263,11 @@ machine Nand
             if (!req.write) {
                 sendRegister(client);
             } else {
-                if (!reachedDeadline() || req.command != c_read_setup) {
+                if (!ready() || req.command != c_read_setup) {
                     sendRegister(client);
                     fail();
                 } else {
                     byteAddress = req.address;
-                    resetTimer();
                     goto s_read_awaiting_execute;
                 }
             }
@@ -297,9 +296,10 @@ machine Nand
             if (!req.write) {
                 sendRegister(client);
             } else {
-                if (!reachedDeadline() || req.command != c_read_execute) {
+                if (!ready() || req.command != c_read_execute) {
                     fail();
                 } else {
+                    resetTimer();
                     goto s_read_providing_data;
                 }
             }
@@ -326,6 +326,9 @@ machine Nand
     state s_read_providing_data {
         on eIORegisterReadWrite do (req: tIORegisterReadWrite) {
             if (!req.write) {
+                if (!ready()) {
+                    fail();
+                }
                 val = getFromMemory();
                 sendRegister(client);
                 stepAddress();
@@ -345,7 +348,7 @@ machine Nand
                     ready = true;
                     goto s_erase_awaiting_block_address;
                 }
-                else if (!reachedDeadline() || req.command != c_read_execute) {
+                else if (!ready() || req.command != c_read_execute) {
                     fail();
                 } else {
                     fail();
@@ -376,7 +379,7 @@ machine Nand
             if (!req.write) {
                 sendRegister(client);
             } else {
-                if (!reachedDeadline() || req.command != c_program_setup) {
+                if (!ready() || req.command != c_program_setup) {
                     if (req.command != c_program_setup) {
                         print "s_program_awaiting_block_address req.command was not c_program_setup";
                     } else {
@@ -414,7 +417,7 @@ machine Nand
             if (!req.write) {
                 sendRegister(client);
             } else {
-                if (!reachedDeadline() || req.command != c_program_setup) {
+                if (!ready() || req.command != c_program_setup) {
                     fail();
                 } else {
                     pageAddress = req.address;
@@ -445,7 +448,7 @@ machine Nand
             if (!req.write) {
                 sendRegister(client);
             } else {
-                if (!reachedDeadline() || req.command != c_program_setup) {
+                if (!ready() || req.command != c_program_setup) {
                     fail();
                 } else {
                     byteAddress = req.address;
@@ -496,7 +499,7 @@ machine Nand
                     ready = true;
                     goto s_erase_awaiting_block_address;
                 }
-                else if (!reachedDeadline() || req.command != c_program_execute) {
+                else if (!ready() || req.command != c_program_execute) {
                     fail();
                 } else {
                     i = 0;
@@ -514,6 +517,7 @@ machine Nand
                         }
                     }
                     resetTimer();
+                    goto s_initial_state;
                 }
             }
         }
@@ -540,7 +544,7 @@ machine Nand
             if (!req.write) {
                 sendRegister(client);
             } else {
-                if (!reachedDeadline() || req.command != c_erase_setup) {
+                if (!ready() || req.command != c_erase_setup) {
                     fail();
                 } else {
                     blockAddress = req.address;
@@ -573,11 +577,12 @@ machine Nand
             if (!req.write) {
                 sendRegister(client);
             } else {
-                if (!reachedDeadline() || req.command != c_erase_execute) {
+                if (!ready() || req.command != c_erase_execute) {
                     fail();
                 } else {
                     blocks[blockAddress] = newBlock;
                     resetTimer();
+                    goto s_initial_state;
                 }
             }
         }

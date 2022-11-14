@@ -50,7 +50,7 @@ machine TestRoundTrip {
                 testSendLen = testSendLen + 1;
             }
             testSendBuffer = sendBuff;
-            writeTest = (blockAddress=req.blockAddress, pageAddress=req.pageAddress, byteAddress=req.byteAddress, buffer = sendBuff, len=req.len);
+            writeTest = (blockAddress=req.blockAddress, pageAddress=req.pageAddress, byteAddress=req.byteAddress, buffer = sendBuff, len=testSendLen);
             send tester, eWriteTestRequest, writeTest;
             goto awaitWriteResponse;
         }
@@ -71,27 +71,7 @@ machine TestRoundTrip {
 
     state awaitReadResponse {
         on eReadTestResponse do (resp: tReadTestResponse) {
-            var i: int;
-            if (resp.len < 0) {
-                send client, eTestReadWriteResp, -1;
-                goto awaitRequest;
-            }
-
-            if (resp.len != testSendLen) {
-                send client, eTestReadWriteResp, -2;
-                goto awaitRequest;
-            }
-
-            i = 0;
-            while (i < resp.len) {
-                if (resp.buffer[i] != testSendBuffer[i]) {
-                    send client, eTestReadWriteResp, -3;
-                    goto awaitRequest;
-                }
-                i = i + 1;
-            }
-
-            send client, eTestReadWriteResp, testSendLen;
+            send client, eTestReadWriteResp, resp.len;
             goto awaitRequest;
         }
     }

@@ -55,6 +55,9 @@ machine NandTester
 
     state testloop {
         on eReadTestRequest do (req: tReadTestRequest) {
+            var setReq: tSetNandRegister;
+            setReq = (offset=reg_command, val=1);
+            send driver, eSetNandRegister, setReq;
             reading = true;
             blockAddress = req.blockAddress;
             pageAddress = req.pageAddress;
@@ -64,6 +67,10 @@ machine NandTester
         }
 
         on eWriteTestRequest do (req: tWriteTestRequest) {
+            var setReq: tSetNandRegister;
+            setReq = (offset=reg_command, val=3);
+            send driver, eSetNandRegister, setReq;
+
             reading = false;
             blockAddress = req.blockAddress;
             pageAddress = req.pageAddress;
@@ -81,14 +88,6 @@ machine NandTester
             setReq = (offset=reg_address, val=blockAddress);
             send driver, eSetNandRegister, setReq;
     
-            if (reading) {
-                setReq = (offset=reg_command, val=1);
-            } else {
-                setReq = (offset=reg_command, val=3);
-            }
-
-            send driver, eSetNandRegister, setReq;
-    
             setReq = (offset=reg_address, val=pageAddress);
             send driver, eSetNandRegister, setReq;
     
@@ -96,11 +95,21 @@ machine NandTester
             send driver, eSetNandRegister, setReq;
 
             if (reading) {
-                send driver, eRead, bytes;
+                setReq = (offset=reg_command, val=2);
+                send driver, eSetNandRegister, setReq;
+                send driver, eWait, 0;
+                goto awaitingReadWait;
             } else {
                 writeReq = (buffer=writeBuffer, len=bytes);
                 send driver, eProgram, writeReq;
             }
+            goto awaitingResp;
+        }
+    }
+
+    state awaitingReadWait {
+        on eWaitResp do (resp: tWaitResp) {
+            send driver, eRead, bytes;
             goto awaitingResp;
         }
     }
@@ -114,8 +123,20 @@ machine NandTester
         }
 
         on eProgramResp do (resp: tProgramResp) {
-            send client, eWriteTestResponse, resp;
+            var setReq: tSetNandRegister;
+            bytesWritten = resp;
+            setReq = (offset=reg_command, val=4);
+            send driver, eSetNandRegister, setReq;
+            send driver, eWait, 0;
+            goto awaitingWriteFinished;
+        }
+    }
+
+    state awaitingWriteFinished {
+        on eWaitResp do (resp: tWaitResp) {
+            send client, eWriteTestResponse, bytesWritten;
             goto testloop;
         }
     }
+
 }

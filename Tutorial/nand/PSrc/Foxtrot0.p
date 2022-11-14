@@ -144,7 +144,7 @@ machine Foxtrot0 {
         entry {
             currOp = currOp + 1;
             if (currOp >= sizeof(currOpReq.commands)) {
-                send nandDevice, eOpResp, (respCode=err, buffers=buffers);
+                send client, eOpResp, (respCode=err, buffers=buffers);
                 goto AwaitingCommand;
             }
             goto PerformingCommand;
@@ -156,6 +156,7 @@ machine Foxtrot0 {
                 err = 0;
                 goto NextCommand;
             }
+            send nandDevice, eGPIOGetStatus;
         }
 
         on eReliableTimerStarted do {

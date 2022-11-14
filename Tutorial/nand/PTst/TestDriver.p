@@ -1,6 +1,4 @@
 machine TestAlpha0SingleRW {
-    var testRT: TestRoundTrip;
-
     start state Init {
         entry {
             var alpha: Alpha0;
@@ -9,14 +7,11 @@ machine TestAlpha0SingleRW {
             nand = new Nand();
             alpha = new Alpha0(nand);
             testRW = new TestAlphaSingleRW(alpha);
-            testRT = new TestRoundTrip(alpha);
         }
     }
 }
 
 machine TestAlpha4SingleRW {
-    var testRT: TestRoundTrip;
-
     start state Init {
         entry {
             var alpha: Alpha4;
@@ -25,14 +20,11 @@ machine TestAlpha4SingleRW {
             nand = new Nand();
             alpha = new Alpha4(nand);
             testRW = new TestAlphaSingleRW(alpha);
-            testRT = new TestRoundTrip(alpha);
         }
     }
 }
 
 machine TestAlpha5SingleRW {
-    var testRT: TestRoundTrip;
-
     start state Init {
         entry {
             var alpha: Alpha5;
@@ -41,14 +33,11 @@ machine TestAlpha5SingleRW {
             nand = new Nand();
             alpha = new Alpha5(nand);
             testRW = new TestAlphaSingleRW(alpha);
-            testRT = new TestRoundTrip(alpha);
         }
     }
 }
 
 machine TestAlpha6SingleRW {
-    var testRT: TestRoundTrip;
-
     start state Init {
         entry {
             var alpha: Alpha6;
@@ -57,7 +46,6 @@ machine TestAlpha6SingleRW {
             nand = new Nand();
             alpha = new Alpha6(nand);
             testRW = new TestAlphaSingleRW(alpha);
-            testRT = new TestRoundTrip(alpha);
         }
     }
 }
@@ -95,8 +83,6 @@ machine TestAlphaSingleRW {
 
 
 machine TestFoxtrot0SingleRW {
-    var testRT: TestRoundTrip;
-
     start state Init {
         entry {
             var foxtrot: Foxtrot0;
@@ -105,14 +91,11 @@ machine TestFoxtrot0SingleRW {
             nand = new Nand();
             foxtrot = new Foxtrot0(nand);
             testRW = new TestFoxtrotSingleRW(foxtrot);
-            testRT = new TestRoundTrip(foxtrot);
         }
     }
 }
 
 machine TestFoxtrot1SingleRW {
-    var testRT: TestRoundTrip;
-
     start state Init {
         entry {
             var foxtrot: Foxtrot1;
@@ -121,14 +104,11 @@ machine TestFoxtrot1SingleRW {
             nand = new Nand();
             foxtrot = new Foxtrot1(nand);
             testRW = new TestFoxtrotSingleRW(foxtrot);
-            testRT = new TestRoundTrip(foxtrot);
         }
     }
 }
 
 machine TestFoxtrot2SingleRW {
-    var testRT: TestRoundTrip;
-
     start state Init {
         entry {
             var foxtrot: Foxtrot2;
@@ -137,7 +117,6 @@ machine TestFoxtrot2SingleRW {
             nand = new Nand();
             foxtrot = new Foxtrot2(nand);
             testRW = new TestFoxtrotSingleRW(foxtrot);
-            testRT = new TestRoundTrip(foxtrot);
         }
     }
 }

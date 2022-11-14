@@ -112,6 +112,7 @@ machine Alpha6 {
                 send client, eWaitResp, 0;
                 goto AwaitingCommand;
             }
+            send nandDevice, eGPIOGetStatus;
         }
 
         on eReliableTimerStarted do {
@@ -134,9 +135,10 @@ machine Alpha6 {
             if (numRead >= numToRead) {
                 readResp = (buffer=readBuff, len=numRead);
                 send client, eReadResp, readResp;
+                goto AwaitingCommand;
+            } else {
                 regRead = (status=status, command=command, address=address, val=val, write=false);
                 send nandDevice, eIORegisterReadWrite, regRead;
-                goto AwaitingCommand;
             }
         }
 
