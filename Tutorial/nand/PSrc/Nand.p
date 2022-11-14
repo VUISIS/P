@@ -380,12 +380,6 @@ machine Nand
                 sendRegister(client);
             } else {
                 if (!ready() || req.command != c_program_setup) {
-                    if (req.command != c_program_setup) {
-                        print "s_program_awaiting_block_address req.command was not c_program_setup";
-                    } else {
-                        print "s_program_awaiting_block_address not ready";
-                    }
-                
                     fail();
                 } else {
                     blockAddress = req.address;
@@ -505,7 +499,7 @@ machine Nand
                     i = 0;
                     addrs = keys(cache);
                     while (i < sizeof(addrs)) {
-                        setInMemory(addr, cache[addrs[i]]);
+                        setInMemory(addrs[i], cache[addrs[i]]);
                         i = i + 1;
                     }
                     pageAddress = pageAddress + 1;

@@ -53,6 +53,8 @@ machine NandCommandTester
             var addrs: seq[int];
             var emptyAddrs: tContextAddr;
             var emptyData: tContextData;
+            var emptyBuff: tContextBuffer;
+            var readData: tContextData;
             var emptyWait: tContextWaitReady;
             var commandContext: tCommandContext;
             var contextCommand: tContextCommand;
@@ -73,7 +75,8 @@ machine NandCommandTester
             opInstrs += (2, opInstr);
             opInstr = (cmdType=nand_op_waitrdy_instr, ctx=(cmd=(opcode=1,), addr=emptyAddrs, dat=emptyData, waitrdy=emptyWait));
             opInstrs += (3, opInstr);
-            opInstr = (cmdType=nand_op_data_out_instr, ctx=(cmd=(opcode=1,), addr=emptyAddrs, dat=emptyData, waitrdy=emptyWait));
+            readData = (buf=emptyBuff, len=req.len);
+            opInstr = (cmdType=nand_op_data_out_instr, ctx=(cmd=(opcode=1,), addr=emptyAddrs, dat=readData, waitrdy=emptyWait));
             opInstrs += (4, opInstr);
             send driver, eOpReq, (commands=opInstrs,);
             reading = true;
@@ -125,11 +128,13 @@ machine NandCommandTester
 
     state awaitReply {
         on eOpResp do (resp: tOpResp) {
+            var lastBuff: int;
             if (reading) {
                 if (resp.respCode != 0) {
                     send client, eReadTestResponse, (buffer=new_buffer(),len=0);
                 } else {
-                    send client, eReadTestResponse, (buffer=resp.buffers[0], len=sizeof(resp.buffers[0]));
+                    lastBuff = sizeof(resp.buffers)-1;
+                    send client, eReadTestResponse, (buffer=resp.buffers[lastBuff], len=sizeof(resp.buffers[lastBuff]));
                 }
             } else {
                 if (resp.respCode != 0) {

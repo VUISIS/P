@@ -54,7 +54,7 @@ machine Foxtrot1 {
             var i: int;
 
             if (currOp >= sizeof(currOpReq.commands) || currOp >= 5) {
-                send nandDevice, eOpResp, (respCode=err, buffers=buffers);
+                send client, eOpResp, (respCode=err, buffers=buffers);
                 goto AwaitingCommand;
             }
             cmd = currOpReq.commands[currOp];
@@ -105,7 +105,7 @@ machine Foxtrot1 {
         entry {
             currOp = currOp + 1;
             if (currOp >= sizeof(currOpReq.commands) || currOp >= 5) {
-                send nandDevice, eOpResp, (respCode=err, buffers=buffers);
+                send client, eOpResp, (respCode=err, buffers=buffers);
                 goto AwaitingCommand;
             }
             goto PerformingCommand;
@@ -117,6 +117,7 @@ machine Foxtrot1 {
                 err = 0;
                 goto NextCommand;
             }
+            send nandDevice, eGPIOGetStatus;
         }
 
         on eReliableTimerStarted do {

@@ -93,7 +93,7 @@ machine Foxtrot0 {
             var i: int;
 
             if (currOp >= sizeof(currOpReq.commands)) {
-                send nandDevice, eOpResp, (respCode=err, buffers=buffers);
+                send client, eOpResp, (respCode=err, buffers=buffers);
                 goto AwaitingCommand;
             }
             cmd = currOpReq.commands[currOp];
@@ -131,6 +131,7 @@ machine Foxtrot0 {
             } else if (cmd.cmdType == nand_op_data_out_instr) {
                 readBuff = newBuffer;
                 numToRead = cmd.ctx.dat.len;
+                numRead = 0;
                 send nandDevice, eIORegisterReadWrite, (status=status,command=command,address=address,val=val,write=false);
                 goto Reading;
             } else if (cmd.cmdType == nand_op_waitrdy_instr) {
